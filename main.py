@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # Générer une paire de clés RSA
     private_key = rsa.generate_private_key(
         public_exponent=65537,
-        key_size=1024
+        key_size=8*k
     )
     public_key = private_key.public_key()
 
