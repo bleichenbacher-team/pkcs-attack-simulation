@@ -79,6 +79,36 @@ def oracle_pkcs1_v15(ciphertext: int, public_key) -> bool:
     return True  # padding PKCS#1 v1.5 OK
 
 
+def blinding_naive(ciphertext: int, public_key, private_key) -> bytes:
+    e = public_key.public_numbers().e
+    n = public_key.public_numbers().n
+
+    # Start with a random blinding factor
+    s0 = 2
+    while True:
+        blinded_ciphertext = (ciphertext * pow(s0, e, n)) % n
+        if oracle_pkcs1_v15(blinded_ciphertext, private_key):
+            return s0.to_bytes((s0.bit_length() + 7) // 8 or 1, byteorder='big')
+        s0 += 1
+
+
+
+def blinding(ciphertext: int, public_key, private_key) -> bytes:
+    """Optimized blinding method for PKCS#1 v1.5 attack"""
+    e = public_key.public_numbers().e
+    n = public_key.public_numbers().n
+
+    # Start with a random blinding factor
+    s0 = 2
+    while True:
+        # Ensure s0 is coprime with n
+        if pow(s0, e, n) != 0:
+            blinded_ciphertext = (ciphertext * pow(s0, e, n)) % n
+            if oracle_pkcs1_v15(blinded_ciphertext, private_key):
+                return s0.to_bytes((s0.bit_length() + 7) // 8 or 1, byteorder='big')
+        s0 += 1
+
+
 
 # Exemple d'utilisation
 if __name__ == "__main__":
@@ -108,3 +138,13 @@ if __name__ == "__main__":
     # Déchiffrer le message
     decrypted_message = rsa_decrypt_with_keys(ciphertext, private_key)
     print(f"Message déchiffré (hex): {decrypted_message.hex()}\n")
+
+    # Recuperation de s0 via blinding
+    s0 = blinding_naive(ciphertext, public_key, private_key)
+    print(f"Valeur de s0 trouvée: {s0}\n")
+
+    print(f"Cypher multiplié par s0 (hex): {hex(ciphertext*rsa_encrypt_with_keys(s0, public_key))}\n")
+
+    # Déchiffrer le message avec la valeur de s0
+    decrypted_message_with_s0 = rsa_decrypt_with_keys(ciphertext * rsa_encrypt_with_keys(s0, public_key), private_key)
+    print(f"Message déchiffré avec s0 (hex): {decrypted_message_with_s0.hex()}\n")
