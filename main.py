@@ -2,6 +2,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 import os
 
+
+
 MAXIMUM_BYTES = 128
 k = MAXIMUM_BYTES
 
@@ -65,6 +67,19 @@ def rsa_decrypt_with_keys(ciphertext: int, private_key) -> bytes:
 
 
 
+def oracle_pkcs1_v15(ciphertext: int, public_key) -> bool:
+    plaintext = rsa_decrypt_with_keys(ciphertext, public_key)
+    if len(plaintext) != k:
+        return False
+    if not plaintext.startswith(b'\x00\x02'):
+        return False
+    padding_end_index = plaintext.find(b'\x00', 2)
+    if padding_end_index < 10:  # au moins 8 octets de padding non nuls
+        return False
+    return True  # padding PKCS#1 v1.5 OK
+
+
+
 # Exemple d'utilisation
 if __name__ == "__main__":
     # Générer une paire de clés RSA
@@ -85,6 +100,10 @@ if __name__ == "__main__":
     # Chiffrer le message
     ciphertext = rsa_encrypt_with_keys(padded_message, public_key)
     print(f"Message chiffré (hex): {ciphertext:x}\n")
+
+    # Verifier si le cypher est pkcs compliant avec l'oracle
+    is_compliant = oracle_pkcs1_v15(ciphertext, private_key)
+    print(f"Le message chiffré est conforme à PKCS#1 v1.5: {is_compliant}\n")
 
     # Déchiffrer le message
     decrypted_message = rsa_decrypt_with_keys(ciphertext, private_key)
