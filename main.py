@@ -9,6 +9,47 @@ k = MAXIMUM_BYTES
 
 
 
+class IntervalSet:
+    """A class to manage a set of intervals."""
+    def __init__(self):
+        self.intervals = []
+
+    def add(self, start: int, end: int):
+        """Add a new interval to the set."""
+        new_interval = (start, end)
+        merged_intervals = []
+        for interval in self.intervals:
+            if interval[1] < new_interval[0] or interval[0] > new_interval[1]:
+                merged_intervals.append(interval)
+            else:
+                new_interval = (min(interval[0], new_interval[0]), max(interval[1], new_interval[1]))
+        merged_intervals.append(new_interval)
+        self.intervals = sorted(merged_intervals)
+
+    def remove(self, start: int, end: int):
+        """Remove an interval from the set."""
+        new_intervals = []
+        for interval in self.intervals:
+            if interval[1] < start or interval[0] > end:
+                new_intervals.append(interval)
+            else:
+                if interval[0] < start:
+                    new_intervals.append((interval[0], start - 1))
+                if interval[1] > end:
+                    new_intervals.append((end + 1, interval[1]))
+        self.intervals = new_intervals
+
+    def contains(self, value: int) -> bool:
+        """Check if a value is within any interval."""
+        for start, end in self.intervals:
+            if start <= value <= end:
+                return True
+        return False
+
+    def __repr__(self):
+        return f"IntervalSet({self.intervals})"
+
+
 def pad_pkcs1_v15(message: bytes) -> bytes:
     """Apply PKCS#1 v1.5 padding (type 2) manually"""
     if len(message) > k - 11:
@@ -116,32 +157,3 @@ if __name__ == "__main__":
     )
     public_key = private_key.public_key()
 
-    # Générer un message
-    message = b"PKCS#1 v1.5!"
-    print(f"Message original: {message.hex()}\n")
-
-    # Ajouter du padding
-    padded_message = pad_pkcs1_v15(message)
-    print(f"Message avec padding (hex): {padded_message.hex()}\n")
-
-    # Chiffrer le message
-    ciphertext = rsa_encrypt_with_keys(padded_message, public_key)
-    print(f"Message chiffré (hex): {ciphertext:x}\n")
-
-    # Verifier si le cypher est pkcs compliant avec l'oracle
-    is_compliant = oracle_pkcs1_v15(ciphertext, private_key)
-    print(f"Le message chiffré est conforme à PKCS#1 v1.5: {is_compliant}\n")
-
-    # Déchiffrer le message
-    decrypted_message = rsa_decrypt_with_keys(ciphertext, private_key)
-    print(f"Message déchiffré (hex): {decrypted_message.hex()}\n")
-
-    # Recuperation de s0 via blinding
-    s0 = blinding_naive(ciphertext, public_key, private_key)
-    print(f"Valeur de s0 trouvée: {s0}\n")
-
-    print(f"Cypher multiplié par s0 (hex): {hex(ciphertext*rsa_encrypt_with_keys(s0, public_key))}\n")
-
-    # Déchiffrer le message avec la valeur de s0
-    decrypted_message_with_s0 = rsa_decrypt_with_keys(ciphertext * rsa_encrypt_with_keys(s0, public_key), private_key)
-    print(f"Message déchiffré avec s0 (hex): {decrypted_message_with_s0.hex()}\n")
