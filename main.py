@@ -6,6 +6,7 @@ import os
 
 MAXIMUM_BYTES = 128
 k = MAXIMUM_BYTES
+B = pow(2, 8 * (k - 2))
 
 
 
@@ -156,4 +157,6 @@ if __name__ == "__main__":
         key_size=8*k
     )
     public_key = private_key.public_key()
+
+    
 
