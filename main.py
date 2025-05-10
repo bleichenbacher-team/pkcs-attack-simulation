@@ -73,9 +73,6 @@ def oracle_pkcs1_v15(ciphertext: int, public_key) -> bool:
         return False
     if not plaintext.startswith(b'\x00\x02'):
         return False
-    padding_end_index = plaintext.find(b'\x00', 2)
-    if padding_end_index < 10:  # au moins 8 octets de padding non nuls
-        return False
     return True  # padding PKCS#1 v1.5 OK
 
 
